@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- Apple PWA / Home Screen config -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Options Lab">
+<meta name="theme-color" content="#050711">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <title>INVSTMOMENTUM Options Setup Lab</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Bebas+Neue&family=Barlow:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -540,8 +546,10 @@ async function newScenario(){
   drawChart();
   updatePhase(1);
   renderContext();
-  // Force redraw after 100ms in case canvas sizing was off
+  // iPad Safari needs extra time for layout to settle before canvas gets real dimensions
   setTimeout(drawChart, 150);
+  setTimeout(drawChart, 500);
+  setTimeout(drawChart, 1200);
 }
 
 function genContext(){const range=lvl.r1-lvl.s1;dayOfWeek=DAYS[Math.floor(Math.random()*DAYS.length)];const c=lvl.pp+(Math.random()-.5)*range*.75;const o=c+(Math.random()-.5)*range*.45;const h=Math.max(o,c)+range*(.12+Math.random()*.20);const l=Math.min(o,c)-range*(.12+Math.random()*.20);prevDay={open:+o.toFixed(2),high:+h.toFixed(2),low:+l.toFixed(2),close:+c.toFixed(2)};pdc=prevDay.close;const gap=scenario.bias==='bullish'?range*(.08+Math.random()*.12):scenario.bias==='bearish'?-range*(.08+Math.random()*.12):(Math.random()-.5)*range*.12;todayOpen=+(pdc+gap).toFixed(2);}
@@ -997,6 +1005,17 @@ function drawPrevDayChart(){
 function closeContextPopup(){document.getElementById('ctxPopup').style.display='none';}
 
 init();
+
+// Redraw chart whenever the canvas container changes size (iPad orientation, panel resize)
+(function(){
+  const wrap = document.querySelector('.chart-wrap');
+  if(!wrap || !window.ResizeObserver) return;
+  let _t;
+  new ResizeObserver(()=>{
+    clearTimeout(_t);
+    _t = setTimeout(drawChart, 80);
+  }).observe(wrap);
+})();
 </script>
 <!-- ── Onboarding Tour ──────────────────────────────────────────── -->
 <div id="onboarding" style="display:none;position:fixed;inset:0;z-index:9999;pointer-events:none">
