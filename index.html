@@ -115,14 +115,18 @@ body{display:flex!important;flex-direction:column!important;}
   padding-bottom:0!important;
   min-height:0!important;
   overflow:hidden!important;
-  height:100%!important;
 }
 .chart-wrap{
   flex:1 1 auto!important;
   min-height:0!important;
   overflow:hidden!important;
-  padding-bottom:14px!important;
-  height:100%!important;
+  padding-bottom:0!important;
+  position:relative!important;
+}
+canvas#chart{
+  display:block!important;
+  width:auto!important;
+  height:auto!important;
 }
 .controls{
   position:static!important;
@@ -281,7 +285,7 @@ const SETUP_META={
 const TIMES=['9:30','9:35','9:40','9:45','9:50','9:55','10:00','10:05','10:10','10:15','10:20','10:25','10:30','10:35','10:40','10:45','10:50','10:55','11:00','11:05','11:10','11:15','11:20','11:25','11:30','11:35','11:40','11:45','11:50','11:55','12:00','12:05','12:10','12:15','12:20','12:25'];
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday'];
 const STORAGE_KEY='invstmomentum_options_setup_lab_v1';
-let tk='SPY',lvl=TICKERS.SPY,bars=[],barIdx=0,scenarioKey='',scenario={},selectedPrimary='',selectedSpecific='',direction='call',openTrade=null,balance=25000,trades=[],sessionStats={scenarios:0,correctRead:0,totalPL:0},appMode='market',indOn={ema:false,vwap:false,pdc:false,pdohlc:false,pdbars:false,ema200:false},prevDay=null,pdc=null,dayOfWeek='Tuesday',todayOpen=0,signalBarIdx=10,shapes=[];
+let tk='SPY',lvl=TICKERS.SPY,bars=[],barIdx=0,scenarioKey='',scenario={},selectedPrimary='',selectedSpecific='',direction='call',openTrade=null,balance=25000,trades=[],sessionStats={scenarios:0,correctRead:0,totalPL:0},appMode='market',indOn={ema:false,vwap:false,pdc:false,pdohlc:false,pdbars:true,ema200:false},prevDay=null,pdc=null,dayOfWeek='Tuesday',todayOpen=0,signalBarIdx=10,shapes=[];
 async function init(){
   buildPrimaryButtons();loadProgress();setMode(appMode,true);
   await initAPI();
@@ -684,14 +688,28 @@ function setChartScale(mode){chartScaleMode=mode||'auto';drawChart();showHint('C
 function ema(arr,period=21){let k=2/(period+1),out=[];arr.forEach((v,i)=>out.push(i? v*k+out[i-1]*(1-k):v));return out;}
 function drawChart(){
   const canvas=document.getElementById('chart');
-  const wrap=canvas.parentElement;
-  const rect=wrap.getBoundingClientRect();
-  // getBoundingClientRect forces layout — always accurate on iPad Safari
-  // Fall back to window dimensions if layout hasn't settled yet
-  const W=Math.max(320, rect.width>10 ? rect.width-32 : window.innerWidth*0.6);
-  const H=Math.max(300, rect.height>10 ? rect.height-24 : window.innerHeight*0.55);
-  canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;
-  canvas.style.width=W+'px';canvas.style.height=H+'px';const ctx=canvas.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);ctx.fillStyle='#0b0e1a';ctx.fillRect(0,0,W,H);const vis=bars.slice(0,barIdx+1);if(!vis.length)return;const pdVis=(indOn.pdbars&&prevDayBars&&prevDayBars.length)?prevDayBars:[];const scaleEl=document.getElementById('chartScaleSelect');if(scaleEl&&scaleEl.value){chartScaleMode=scaleEl.value;}const piv=[lvl.r2,lvl.r1,lvl.pp,lvl.s1,lvl.s2],pdVals=prevDay?[prevDay.high,prevDay.low,prevDay.open,prevDay.close]:[];
+
+  // Measure every element that takes up vertical space
+  const hOf=id=>document.getElementById(id)?.offsetHeight||0;
+  const qh=sel=>document.querySelector(sel)?.offsetHeight||0;
+  const topbarH  = qh('.topbar');
+  const disclaimH= document.querySelector('.disclaimer')?.offsetHeight||0;
+  const phaseH   = document.querySelector('.phase-bar')?.offsetHeight||0;
+  const headerH  = qh('.chart-header');
+  const indBarH  = qh('.ind-bar');
+  const controlsH= qh('.controls')||76;
+  const usedH = topbarH + disclaimH + phaseH + headerH + indBarH + controlsH;
+
+  // Width: window minus the right panel
+  const panelEl = document.querySelector('.right-panel');
+  const panelW  = panelEl ? panelEl.offsetWidth : 440;
+  const W = Math.max(320, window.innerWidth - panelW - 2);
+  const H = Math.max(280, window.innerHeight - usedH - 8);
+
+  canvas.width  = Math.round(W * devicePixelRatio);
+  canvas.height = Math.round(H * devicePixelRatio);
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';const ctx=canvas.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);ctx.fillStyle='#0b0e1a';ctx.fillRect(0,0,W,H);const vis=bars.slice(0,barIdx+1);if(!vis.length)return;const pdVis=(indOn.pdbars&&prevDayBars&&prevDayBars.length)?prevDayBars:[];const scaleEl=document.getElementById('chartScaleSelect');if(scaleEl&&scaleEl.value){chartScaleMode=scaleEl.value;}const piv=[lvl.r2,lvl.r1,lvl.pp,lvl.s1,lvl.s2],pdVals=prevDay?[prevDay.high,prevDay.low,prevDay.open,prevDay.close]:[];
   // Chart scale modes:
   // Auto Focus  = zoom around visible candles while keeping nearby pivot context readable.
   // S2–R2 Range = strict floor-pivot range, no extra space above/below.
